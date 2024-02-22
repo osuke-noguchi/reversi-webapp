@@ -1,6 +1,6 @@
 import express from 'express';
-import morgan from 'morgan';
 import 'express-async-errors';
+import morgan from 'morgan';
 import mysql from 'mysql2/promise';
 
 const EMPTY = 0;
@@ -28,7 +28,7 @@ app.use(express.json());
 
 app.get('/api/hello', async (req, res) => {
   res.json({
-    message: 'Hello Express!',
+    message: 'Hello Express!!!',
   });
 });
 
@@ -38,17 +38,16 @@ app.get('/api/error', async (req, res) => {
 
 app.post('/api/games', async (req, res) => {
   const now = new Date();
-  const conn = await connectMySQL();
 
+  const conn = await connectMySQL();
   try {
     await conn.beginTransaction();
 
-    const gameResult = await conn.execute<mysql.ResultSetHeader>(
+    const gameInsertResult = await conn.execute<mysql.ResultSetHeader>(
       'insert into games (started_at) values (?)',
       [now]
     );
-
-    const gameId = gameResult[0].insertId;
+    const gameId = gameInsertResult[0].insertId;
 
     const turnInsertResult = await conn.execute<mysql.ResultSetHeader>(
       'insert into turns (game_id, turn_count, next_disc, end_at) values (?, ?, ?, ?)',
@@ -61,23 +60,23 @@ app.post('/api/games', async (req, res) => {
       0
     );
 
-    const squareInsertSql =
+    const squaresInsertSql =
       'insert into squares (turn_id, x, y, disc) values ' +
       Array.from(Array(squareCount))
         .map(() => '(?, ?, ?, ?)')
-        .join(' ,');
+        .join(', ');
 
-    const squareInsertValues: any[] = [];
+    const squaresInsertValues: any[] = [];
     INITIAL_BOARD.forEach((line, y) => {
       line.forEach((disc, x) => {
-        squareInsertValues.push(turnId);
-        squareInsertValues.push(x);
-        squareInsertValues.push(y);
-        squareInsertValues.push(disc);
+        squaresInsertValues.push(turnId);
+        squaresInsertValues.push(x);
+        squaresInsertValues.push(y);
+        squaresInsertValues.push(disc);
       });
     });
 
-    await conn.execute(squareInsertSql, squareInsertValues);
+    await conn.execute(squaresInsertSql, squaresInsertValues);
 
     await conn.commit();
   } finally {
@@ -104,7 +103,7 @@ app.get('/api/games/latest/turns/:turnCount', async (req, res) => {
     const turn = turnSelectResult[0][0];
 
     const squaresSelectResult = await conn.execute<mysql.RowDataPacket[]>(
-      'select id, turn_id, x, y, disc from squares where turn_id = ?',
+      `select id, turn_id, x, y, disc from squares where turn_id = ?`,
       [turn['id']]
     );
     const squares = squaresSelectResult[0];
@@ -117,6 +116,7 @@ app.get('/api/games/latest/turns/:turnCount', async (req, res) => {
       turnCount,
       board,
       nextDisc: turn['next_disc'],
+      // TODO 決着がついている場合、game_results テーブルから取得する
       winnerDisc: null,
     };
     res.json(responseBody);
@@ -125,17 +125,17 @@ app.get('/api/games/latest/turns/:turnCount', async (req, res) => {
   }
 });
 
-app.use(errorHandler);
-
 app.post('/api/games/latest/turns', async (req, res) => {
   const turnCount = parseInt(req.body.turnCount);
   const disc = parseInt(req.body.move.disc);
   const x = parseInt(req.body.move.x);
   const y = parseInt(req.body.move.y);
 
-  // 1つ前のターンを取得する
   const conn = await connectMySQL();
   try {
+    await conn.beginTransaction();
+
+    // 1つ前のターンを取得する
     const gameSelectResult = await conn.execute<mysql.RowDataPacket[]>(
       'select id, started_at from games order by id desc limit 1'
     );
@@ -149,7 +149,7 @@ app.post('/api/games/latest/turns', async (req, res) => {
     const turn = turnSelectResult[0][0];
 
     const squaresSelectResult = await conn.execute<mysql.RowDataPacket[]>(
-      'select id, turn_id, x, y, disc from squares where turn_id = ?',
+      `select id, turn_id, x, y, disc from squares where turn_id = ?`,
       [turn['id']]
     );
     const squares = squaresSelectResult[0];
@@ -158,11 +158,12 @@ app.post('/api/games/latest/turns', async (req, res) => {
       board[s.y][s.x] = s.disc;
     });
 
-    // 盤面におけるかチェク
+    // TODO 盤面に置けるかチェック
 
     // 石を置く
+    board[y][x] = disc;
 
-    // ひっくり返す
+    // TODO ひっくり返す
 
     // ターンを保存する
     const nextDisc = disc === DARK ? LIGHT : DARK;
@@ -177,23 +178,23 @@ app.post('/api/games/latest/turns', async (req, res) => {
       .map((line) => line.length)
       .reduce((v1, v2) => v1 + v2, 0);
 
-    const squareInsertSql =
+    const squaresInsertSql =
       'insert into squares (turn_id, x, y, disc) values ' +
       Array.from(Array(squareCount))
         .map(() => '(?, ?, ?, ?)')
-        .join(' ,');
+        .join(', ');
 
-    const squareInsertValues: any[] = [];
+    const squaresInsertValues: any[] = [];
     board.forEach((line, y) => {
       line.forEach((disc, x) => {
-        squareInsertValues.push(turnId);
-        squareInsertValues.push(x);
-        squareInsertValues.push(y);
-        squareInsertValues.push(disc);
+        squaresInsertValues.push(turnId);
+        squaresInsertValues.push(x);
+        squaresInsertValues.push(y);
+        squaresInsertValues.push(disc);
       });
     });
 
-    await conn.execute(squareInsertSql, squareInsertValues);
+    await conn.execute(squaresInsertSql, squaresInsertValues);
 
     await conn.execute(
       'insert into moves (turn_id, disc, x, y) values (?, ?, ?, ?)',
@@ -208,8 +209,10 @@ app.post('/api/games/latest/turns', async (req, res) => {
   res.status(201).end();
 });
 
+app.use(errorHandler);
+
 app.listen(PORT, () => {
-  console.log(`Reversi Application started: http://localhost:${PORT}`);
+  console.log(`Reversi application started: http://localhost:${PORT}`);
 });
 
 function errorHandler(
