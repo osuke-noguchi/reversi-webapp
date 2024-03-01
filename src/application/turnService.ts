@@ -1,12 +1,8 @@
-import { connectMySQL } from '../dataaccess/connection';
-import { GameGateway } from '../dataaccess/gameGateway';
-import { GameRecord } from '../dataaccess/gameRecord';
+import { connectMySQL } from '../infrastructure/connection';
 import { GameRepository } from '../domain/game/gameRepository';
 import { toDisc } from '../domain/turn/disc';
 import { Point } from '../domain/turn/point';
 import { TurnRepository } from '../domain/turn/turnRepository';
-
-const gameGateway = new GameGateway();
 
 const turnRepository = new TurnRepository();
 const gameRepository = new GameRepository();
