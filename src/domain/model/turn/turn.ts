@@ -1,4 +1,5 @@
 import { DomainError } from '../../error/domainError';
+import { WinnerDisc } from '../gameResult/winnerDisc';
 import { Board, initialBoard } from './board';
 import { Disc } from './disc';
 import { Move } from './move';
@@ -27,7 +28,6 @@ export class Turn {
 
     const nextBoard = this._board.place(move);
 
-    // TODO 次の石が置けない場合は、スキップする処理
     const nextDisc = this.decideNextDisc(nextBoard, disc);
 
     return new Turn(
@@ -38,6 +38,23 @@ export class Turn {
       nextBoard,
       new Date()
     );
+  }
+
+  gameEnded(): boolean {
+    return this.nextDisc === undefined;
+  }
+
+  winnerDisc(): WinnerDisc {
+    const darkCount = this._board.count(Disc.Dark);
+    const lightCount = this._board.count(Disc.Light);
+
+    if (darkCount === lightCount) {
+      return WinnerDisc.Draw;
+    } else if (darkCount > lightCount) {
+      return WinnerDisc.Dark;
+    } else {
+      return WinnerDisc.Light;
+    }
   }
 
   private decideNextDisc(board: Board, previousDisc: Disc): Disc | undefined {

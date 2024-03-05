@@ -96,6 +96,10 @@ export class TurnService {
       // ターンを保存する
       await turnRepository.save(conn, newTurn);
 
+      if (newTurn.gameEnded()) {
+        const winnerDisc = newTurn.winnerDisc();
+      }
+
       await conn.commit();
     } finally {
       await conn.end();
