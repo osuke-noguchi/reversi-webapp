@@ -14,7 +14,7 @@ export class Board {
     if (this._discs[move.point.y][move.point.x] !== Disc.Empty) {
       throw new DomainError(
         'SelectedPointNotEmpty',
-        'Select point is not empty'
+        'Selected point not empty'
       );
     }
 
@@ -91,7 +91,7 @@ export class Board {
     return flipPoints;
   }
 
-  existDarkValidMove(disc: Disc): boolean {
+  existValidMove(disc: Disc): boolean {
     for (let y = 0; y < this._discs.length; y++) {
       const line = this._discs[y];
 

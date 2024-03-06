@@ -45,8 +45,8 @@ export class Turn {
   }
 
   winnerDisc(): WinnerDisc {
-    const darkCount = this._board.count(Disc.Dark);
-    const lightCount = this._board.count(Disc.Light);
+    const darkCount = this.board.count(Disc.Dark);
+    const lightCount = this.board.count(Disc.Light);
 
     if (darkCount === lightCount) {
       return WinnerDisc.Draw;
@@ -58,8 +58,8 @@ export class Turn {
   }
 
   private decideNextDisc(board: Board, previousDisc: Disc): Disc | undefined {
-    const existDarkValidMove = board.existDarkValidMove(Disc.Dark);
-    const existLightValidMove = board.existDarkValidMove(Disc.Light);
+    const existDarkValidMove = board.existValidMove(Disc.Dark);
+    const existLightValidMove = board.existValidMove(Disc.Light);
     if (existDarkValidMove && existLightValidMove) {
       // 両方おける場合は、前の石と反対の石の番
       return previousDisc == Disc.Dark ? Disc.Light : Disc.Dark;

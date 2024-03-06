@@ -23,10 +23,15 @@ app.listen(PORT, () => {
   console.log(`Reversi application started: http://localhost:${PORT}`);
 });
 
+interface ErrorResponseBody {
+  type: string;
+  message: string;
+}
+
 function errorHandler(
   err: any,
   _req: express.Request,
-  res: express.Response,
+  res: express.Response<ErrorResponseBody>,
   _next: express.NextFunction
 ) {
   if (err instanceof DomainError) {
@@ -49,7 +54,8 @@ function errorHandler(
   }
 
   console.error('Unexpected error occurred', err);
-  res.status(500).send({
+  res.status(500).json({
+    type: 'UnecpectedError',
     message: 'Unexpected error occurred',
   });
 }
